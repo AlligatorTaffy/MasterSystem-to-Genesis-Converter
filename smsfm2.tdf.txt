@@ -1,0 +1,65 @@
+% 
+  SMSFM v2.0 logic (AHDL)
+  Tim Worthington 2013
+  
+  address/data - active high
+  all others - active low
+%
+
+SUBDESIGN smsfm2
+(
+ d0				: BIDIR;
+ d1				: OUTPUT;
+ d2				: OUTPUT;
+ a0				: INPUT;
+ a1				: INPUT;
+ a2				: INPUT;
+ a6				: INPUT;
+ a7				: INPUT;
+ rd				: INPUT;
+ wr				: INPUT;
+ reset			: INPUT;
+ ym_reset		: OUTPUT;
+ ym_cs			: OUTPUT;
+ iorq			: INPUT;
+ kbsel			: INPUT;	-- unused input, must go somewhere
+ killg			: OUTPUT;
+ fm_en			: INPUT;
+ jpfm_en		: INPUT;
+ mode			: INPUT;
+)
+
+VARIABLE
+bit				: DFF;
+fm_addr			: NODE;
+d_tri[2..0]		: TRI;
+killg_tri		: TRI;
+kbsel_int		: NODE;
+
+BEGIN
+
+--FM
+!kbsel_int = !iorq and a6 and a7;
+fm_addr = a2 or kbsel_int or (fm_en and (jpfm_en or !mode));
+
+d0 = d_tri[0].out;
+d1 = d_tri[1].out;
+d2 = d_tri[2].out;
+d_tri[0].in = bit.q;
+d_tri[2..1].in = gnd;
+d_tri[2..0].oe = !rd and !fm_addr;
+
+bit.clrn = reset;
+bit.clk = !a1 or wr or !rd or fm_addr;
+bit.d = d0;
+
+ym_reset = reset;
+ym_cs = a1 or wr or !rd or fm_addr;
+
+--JP
+killg_tri.oe = !a7 and !a6 and !wr and !iorq and a0 and !jpfm_en;
+killg_tri.in = vcc;
+killg = killg_tri.out;
+
+END;
+
